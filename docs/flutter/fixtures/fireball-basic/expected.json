@@ -1,0 +1,19 @@
+{
+  "baseline":{
+    "Life":65,
+    "TotalDPS":124.83333333333
+  },
+  "fixture":"fireball-basic",
+  "modified":{
+    "TotalDPS":249.66666666667,
+    "customMods":"100% increased Spell Damage"
+  },
+  "skill":"Fireball 20/0",
+  "targetVersion":"0_1",
+  "tolerance":{
+    "Life":0,
+    "TotalDPS":1e-06
+  },
+  "treeVersion":"0_5",
+  "xmlRoundTripExact":false
+}
