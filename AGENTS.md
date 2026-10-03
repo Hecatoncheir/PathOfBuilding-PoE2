@@ -4,7 +4,7 @@
 
 `src/` содержит приложение на Lua: `Modules/` — запуск и логика сборок, `Classes/` — интерфейс и сервисы, `Data/` — игровые данные, `TreeData/` — деревья и ресурсы, `Export/` — генераторы данных. `runtime/` содержит Windows runtime и библиотеки Lua. Системные тесты находятся в `spec/System/`, Python-тесты — в `tests/`.
 
-`ui-ux/` — самостоятельный HTML/JS-прототип с темами Gruvbox. `docs/flutter/` содержит реестр функций и эталоны; `tools/` — вспомогательные сценарии. План переноса находится в `TODO.md`; Первая Windows-основа находится в `flutter_app/`; команды: `flutter analyze`, `flutter test`, `flutter run -d windows` из её каталога.
+`ui-ux/` — самостоятельный HTML/JS-прототип с темами Gruvbox. `docs/flutter/` содержит реестр функций и эталоны; `tools/` — вспомогательные сценарии. План переноса находится в `TODO.md`; Первая Windows-основа находится в `app/`; команды: `flutter analyze`, `flutter test`, `flutter run -d windows` из её каталога.
 
 ## Разработка и проверка
 
