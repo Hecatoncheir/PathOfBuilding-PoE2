@@ -4,7 +4,7 @@
 
 `src/` содержит приложение на Lua: `Modules/` — запуск и логика сборок, `Classes/` — интерфейс и сервисы, `Data/` — игровые данные, `TreeData/` — деревья и ресурсы, `Export/` — генераторы данных. `runtime/` содержит Windows runtime и библиотеки Lua. Системные тесты находятся в `spec/System/`, Python-тесты — в `tests/`.
 
-`ui-ux/` — самостоятельный HTML/JS-прототип с темами Gruvbox. `docs/flutter/` содержит реестр функций и эталоны; `tools/` — вспомогательные сценарии. План переноса находится в `TODO.md`; Flutter-приложение пока не создано.
+`ui-ux/` — самостоятельный HTML/JS-прототип с темами Gruvbox. `docs/flutter/` содержит реестр функций и эталоны; `tools/` — вспомогательные сценарии. План переноса находится в `TODO.md`; Первая Windows-основа находится в `flutter_app/`; команды: `flutter analyze`, `flutter test`, `flutter run -d windows` из её каталога.
 
 ## Разработка и проверка
 
@@ -15,6 +15,8 @@
 - `node --check ui-ux/app.js` проверяет синтаксис JavaScript.
 - `python tools/flutter_inventory.py` обновляет статический реестр исходных модулей.
 - `python tools/run_headless.py tools/headless_smoke.lua` проверяет расчёт через Windows runtime; перезаписывает эталонные файлы Fireball.
+- `python tools/run_headless.py tools/check_headless_baseline.lua` сравнивает результаты с сохранённым эталоном без его перезаписи.
+- `python tools/check_engine_protocol.py` проверяет команды экспериментального процесса движка и ошибки протокола.
 - `busted --lua=luajit ../spec/System/TestOffence_spec.lua` запускает один системный тест с конфигурацией `.busted`; требует Busted/LuaJIT, как в CI.
 - `git diff --check` проверяет ошибки пробелов перед коммитом.
 
