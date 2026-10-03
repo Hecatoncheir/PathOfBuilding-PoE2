@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Path of Building · Мастерская</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="#"><span class="brand-mark">◈</span><span>PATH OF BUILDING<small>II · МАСТЕРСКАЯ СБОРОК</small></span></a><button id="command">Поиск раздела <kbd>Ctrl K</kbd></button><div class="top-actions"><button id="theme" aria-label="Переключить тему">◐</button><button id="export">Экспорт</button><button class="primary" id="import">Импорт сборки</button></div></header>
+  <div class="shell"><aside class="sidebar"><div class="eyebrow">ВАША СБОРКА</div><h2>Искра в темноте</h2><p class="subtle">Чародейка · Stormweaver</p><div class="character"><span>✧</span><label>Уровень <input id="level" type="number" min="1" max="100" value="90"></label></div><nav aria-label="Разделы сборки" id="navigation"></nav><div class="sidebar-foot"><span class="save-dot"></span><span id="save-state">Сохранено на устройстве</span><small>Концепт интерфейса · демонстрационные данные</small></div></aside>
+  <main><div class="page-heading"><div><div class="eyebrow">ПЛАНИРУЙТЕ. ПРОБУЙТЕ. СРАВНИВАЙТЕ.</div><h1 id="page-title">Дерево пассивных умений</h1><p id="page-description">Каждый выбор — шаг к вашей следующей сборке.</p></div><button id="undo" title="Отменить последнее изменение">↶ Отменить</button></div><div class="contextbar"><label>Набор <select id="build-set"><option>Основной</option><option>Для боссов</option><option>Для карт</option></select></label><span class="context-divider"></span><label>Цель <select id="enemy"><option>Обычный противник</option><option>Босс</option></select></label><span class="pill">Локальный прототип</span></div><section id="workspace" aria-label="Рабочая область"></section></main>
+  <aside class="inspector"><div class="eyebrow">ПУЛЬС СБОРКИ</div><h2>Всё важное рядом</h2><label class="skill-label">Основное умение<select><option>Spark · Искра</option></select></label><div class="hero-stat"><span>Урон в секунду</span><strong id="dps">128 450</strong><small>Пример показателя, без расчёта Lua</small></div><div class="stat-grid"><div><span>Здоровье</span><strong>2 840</strong></div><div><span>Энерг. щит</span><strong>4 120</strong></div><div><span>Мана</span><strong>1 860</strong></div><div><span>Дух</span><strong>100</strong></div></div><h3>Сопротивления</h3><div class="resistances"><div><span>Огонь</span><b>75%</b></div><div><span>Холод</span><b>75%</b></div><div><span>Молния</span><b>75%</b></div><div><span>Хаос</span><b class="warning">32%</b></div></div><div class="insight"><span>◇</span><div><b>Есть пространство для роста</b><p>В примере сопротивление хаосу ниже остальных. Сравните варианты снаряжения.</p></div></div><button class="wide" id="open-calcs">Открыть подробные расчёты →</button><details><summary>Условия и ограничения</summary><p>Все числа демонстрационные. Изменения в прототипе не отражают игровые формулы.</p></details></aside></div>
+  <div id="toast" role="status"></div><dialog id="modal"><form method="dialog"><button class="close" aria-label="Закрыть">×</button></form><div id="modal-content"></div></dialog>
+</body>
+</html>
