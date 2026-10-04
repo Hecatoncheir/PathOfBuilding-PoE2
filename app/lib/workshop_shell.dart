@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Оболочка отображает ответы движка; игровые значения здесь не вычисляются.
-class WorkshopShell extends StatelessWidget {
+class WorkshopShell extends StatefulWidget {
   const WorkshopShell({
     super.key,
     required this.section,
@@ -9,12 +9,69 @@ class WorkshopShell extends StatelessWidget {
     required this.output,
     required this.tree,
     required this.editor,
+    this.buildInfo = const {},
+    this.onSkill,
   });
   final int section;
   final ValueChanged<int> onSection;
   final Map<String, dynamic> output;
   final Map<String, dynamic>? tree;
   final Widget editor;
+  final Map<String, dynamic> buildInfo;
+  final Future<void> Function(Map<String, dynamic>)? onSkill;
+
+  @override
+  State<WorkshopShell> createState() => _WorkshopShellState();
+}
+
+class _WorkshopShellState extends State<WorkshopShell> {
+  bool showPulse = true;
+  final _panelRevision = ValueNotifier<int>(0);
+
+  @override
+  void didUpdateWidget(covariant WorkshopShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _panelRevision.value++;
+    });
+  }
+
+  @override
+  void dispose() {
+    _panelRevision.dispose();
+    super.dispose();
+  }
+
+  int get section => widget.section;
+  ValueChanged<int> get onSection => widget.onSection;
+  Map<String, dynamic> get output => widget.output;
+  Widget get editor => widget.editor;
+
+  Future<void> openPulse(BuildContext context) => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    useSafeArea: true,
+    builder: (context) => SizedBox(
+      height: MediaQuery.sizeOf(context).height * .85,
+      width: double.infinity,
+      child: ValueListenableBuilder<int>(
+        valueListenable: _panelRevision,
+        builder: (context, revision, child) => pulse(context),
+      ),
+    ),
+  );
+
+  Widget pulseButton(BuildContext context, bool wide) => IconButton(
+    tooltip: wide
+        ? (showPulse ? 'Скрыть показатели' : 'Показать показатели')
+        : 'Показать показатели',
+    onPressed: () =>
+        wide ? setState(() => showPulse = !showPulse) : openPulse(context),
+    icon: Icon(
+      showPulse && wide ? Icons.chevron_right : Icons.monitor_heart_outlined,
+    ),
+  );
 
   Widget navigation(BuildContext context) => SizedBox(
     width: 220,
@@ -24,9 +81,20 @@ class WorkshopShell extends StatelessWidget {
         Text('ВАША СБОРКА', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 16),
         Text(
-          output.isEmpty ? 'Откройте сборку' : 'Текущая сборка',
+          widget.buildInfo['name'] as String? ?? 'Откройте сборку',
           style: Theme.of(context).textTheme.titleLarge,
         ),
+        if (widget.buildInfo.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            [
+              widget.buildInfo['class'],
+              widget.buildInfo['ascendancy'],
+            ].where((value) => value != null && value != '').join(' · '),
+          ),
+          const SizedBox(height: 12),
+          Text('Уровень ${widget.buildInfo['level']}'),
+        ],
         const SizedBox(height: 32),
         for (final entry in const [
           (3, 'Дерево', Icons.account_tree_outlined),
@@ -56,6 +124,40 @@ class WorkshopShell extends StatelessWidget {
     ),
   );
 
+  Widget skillSelector(String key, String label) {
+    final control = widget.buildInfo[key] as Map?;
+    final entries = control?['entries'] as List? ?? [];
+    if (entries.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: DropdownButtonFormField<int>(
+        initialValue: control?['selected'] as int?,
+        key: ValueKey('$key-${control?['selected']}-${entries.toString()}'),
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        items: [
+          for (final entry in entries)
+            DropdownMenuItem(
+              value: entry['id'] as int,
+              child: Text(
+                entry['label'] as String,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+        onChanged: control?['enabled'] == true && widget.onSkill != null
+            ? (id) {
+                if (id != null) widget.onSkill!({'control': key, 'id': id});
+              }
+            : null,
+      ),
+    );
+  }
+
   Widget pulse(BuildContext context) => SizedBox(
     width: 270,
     child: ListView(
@@ -64,6 +166,8 @@ class WorkshopShell extends StatelessWidget {
         Text('ПУЛЬС СБОРКИ', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 12),
         Text('Всё важное рядом', style: Theme.of(context).textTheme.titleLarge),
+        skillSelector('groups', 'Основное умение'),
+        skillSelector('skills', 'Активное умение'),
         const Divider(height: 48),
         const Text('Урон в секунду'),
         const SizedBox(height: 12),
@@ -114,6 +218,7 @@ class WorkshopShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, size) {
+      final wide = size.maxWidth >= 1250;
       if (size.maxWidth < 760) {
         return Column(
           children: [
@@ -121,6 +226,7 @@ class WorkshopShell extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
+                  pulseButton(context, false),
                   for (final entry in const [
                     (3, 'Дерево'),
                     (1, 'Условия'),
@@ -145,10 +251,18 @@ class WorkshopShell extends StatelessWidget {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          navigation(context),
+          Column(
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: pulseButton(context, wide),
+              ),
+              Expanded(child: navigation(context)),
+            ],
+          ),
           const VerticalDivider(width: 1),
           editor,
-          if (size.maxWidth >= 1250) ...[
+          if (wide && showPulse) ...[
             const VerticalDivider(width: 1),
             pulse(context),
           ],

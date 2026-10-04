@@ -36,6 +36,7 @@ class _WorkshopState extends State<WorkshopApp> {
   final filePath = TextEditingController();
   BuildSession? session;
   Map<String, dynamic> output = {};
+  Map<String, dynamic> buildInfo = {};
   Map<String, dynamic>? tree;
   String status = 'Подключение к Lua…';
   String? root;
@@ -93,6 +94,8 @@ class _WorkshopState extends State<WorkshopApp> {
       await action();
       if (session != null && session!.output.isNotEmpty) {
         tree = await engine.request('getTree');
+        final snapshot = await engine.request('getSnapshot');
+        buildInfo = Map<String, dynamic>.from(snapshot['buildInfo'] as Map);
       }
       if (mounted) {
         setState(() => status = 'Результат Lua · ревизия ${engine.revision}');
@@ -422,6 +425,13 @@ class _WorkshopState extends State<WorkshopApp> {
               section: section,
               onSection: (value) => setState(() => section = value),
               output: output,
+              buildInfo: buildInfo,
+              onSkill: editable
+                  ? (params) => perform(() async {
+                      await session!.selectMainSkill(params);
+                      if (mounted) setState(() => output = session!.output);
+                    })
+                  : null,
               tree: tree,
               editor: editor,
             );

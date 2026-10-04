@@ -48,6 +48,9 @@ class BuildSession {
     await treeAction({'id': id, 'action': 'toggle'});
   }
 
+  Future<void> selectMainSkill(Map<String, dynamic> params) =>
+      _changeTree('selectMainSkill', params);
+
   Future<void> treeAction(Map<String, dynamic> params) async {
     await _changeTree('treeAction', params);
   }

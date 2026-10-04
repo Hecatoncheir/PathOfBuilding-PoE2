@@ -51,6 +51,14 @@ local running = true
 local function fail(code, message)
 	error({ code = code, message = message, recoverable = true }, 0)
 end
+local function selector(control)
+	local entries = {}
+	for index, value in ipairs(control.list or {}) do
+		local label = type(value) == "table" and value.label or value
+		entries[#entries + 1] = { id = index, label = tostring(label):gsub("%^x%x%x%x%x%x%x", ""):gsub("%^%d", "") }
+	end
+	return { entries = entries, selected = control.selIndex, enabled = control:IsShown() and control:IsEnabled() }
+end
 local function snapshot()
 	local values = {}
 	for _, name in ipairs({ "TotalDPS", "Life", "Mana", "EnergyShield", "Spirit", "FireResist", "ColdResist", "LightningResist", "ChaosResist" }) do
@@ -62,7 +70,10 @@ local function snapshot()
 			values[name] = value
 		end
 	end
-	return { targetVersion = build.targetVersion, treeVersion = build.spec.treeVersion, output = values }
+	return { targetVersion = build.targetVersion, treeVersion = build.spec.treeVersion, output = values,
+		buildInfo = { name = build.buildName, level = build.characterLevel, class = build.spec.curClassName,
+			ascendancy = build.spec.curAscendClassName, groups = selector(build.controls.mainSocketGroup),
+			skills = selector(build.controls.mainSkill) } }
 end
 local function validateXML(xml)
 	if type(xml) ~= "string" or #xml > 4 * 1024 * 1024 then
@@ -347,7 +358,7 @@ function methods.toggleNode(params)
 	return snapshot()
 end
 function methods.initialize()
-	return { methods = { "initialize", "loadBuild", "getSnapshot", "setCustomMods", "exportBuild", "getTree", "getNodeTooltip", "getJewels", "treeOptions", "treeAction", "toggleNode", "shutdown" }, platform = "windows-experimental" }
+	return { methods = { "initialize", "loadBuild", "getSnapshot", "setCustomMods", "exportBuild", "selectMainSkill", "getTree", "getNodeTooltip", "getJewels", "treeOptions", "treeAction", "toggleNode", "shutdown" }, platform = "windows-experimental" }
 end
 function methods.loadBuild(params)
 	validateXML(params.xml)
@@ -369,6 +380,17 @@ function methods.setCustomMods(params)
 	runCallback("OnFrame")
 	return snapshot()
 end
+function methods.selectMainSkill(params)
+	local control = params.control == "groups" and build.controls.mainSocketGroup
+		or params.control == "skills" and build.controls.mainSkill
+	if not control or type(params.id) ~= "number" or params.id % 1 ~= 0
+		or not control.list[params.id] or not control:IsShown() or not control:IsEnabled() then
+		fail("INVALID_REQUEST", "Выбор умения недоступен")
+	end
+	control:SetSel(control:ListIndexToDropIndex(params.id, 0))
+	runCallback("OnFrame")
+	return snapshot()
+end
 function methods.exportBuild()
 	return { xml = assert(build:SaveDB("Flutter session")) }
 end
@@ -376,7 +398,7 @@ function methods.shutdown()
 	running = false
 	return { stopped = true }
 end
-local mutations = { loadBuild = true, setCustomMods = true, toggleNode = true, treeAction = true, treeOptions = true }
+local mutations = { selectMainSkill = true, loadBuild = true, setCustomMods = true, toggleNode = true, treeAction = true, treeOptions = true }
 local function dispatch(request)
 	if type(request) ~= "table" or type(request.id) ~= "string" or type(request.method) ~= "string" then
 		fail("INVALID_REQUEST", "Неверная структура запроса")
