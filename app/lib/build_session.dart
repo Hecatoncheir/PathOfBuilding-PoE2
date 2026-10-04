@@ -45,9 +45,24 @@ class BuildSession {
 
   Future<void> undo() => _restore(_undo, _redo);
   Future<void> toggleNode(int id) async {
+    await treeAction({'id': id, 'action': 'toggle'});
+  }
+
+  Future<void> treeAction(Map<String, dynamic> params) async {
+    await _changeTree('treeAction', params);
+  }
+
+  Future<void> treeOptions(Map<String, dynamic> params) =>
+      _changeTree('treeOptions', params);
+
+  Future<void> _changeTree(String method, Map<String, dynamic> params) async {
     final previous = await export();
-    final result = await engine.request('toggleNode', {'id': id});
+    final result = await engine.request(method, params);
     output = result['output'] as Map<String, dynamic>;
+    if (method == 'treeOptions' &&
+        params.keys.every((key) => key == 'mode' || key == 'compare')) {
+      return;
+    }
     _undo.add(previous);
     if (_undo.length > 40) _undo.removeAt(0);
     _redo.clear();

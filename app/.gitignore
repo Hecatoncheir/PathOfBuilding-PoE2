@@ -1,4 +1,5 @@
 # Miscellaneous
+test/failures/
 *.class
 *.log
 *.pyc

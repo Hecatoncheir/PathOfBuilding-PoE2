@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'engine_client.dart';
 import 'build_session.dart';
 import 'passive_tree.dart';
+import 'workshop_shell.dart';
 
 void main() => runApp(const WorkshopApp());
 ThemeData gruvbox(bool dark) => ThemeData(
@@ -39,7 +40,7 @@ class _WorkshopState extends State<WorkshopApp> {
   String status = 'Подключение к Lua…';
   String? root;
   bool dark = true, busy = true, ready = false;
-  int section = 0;
+  int section = 3;
   static const sections = [
     'Расчёты',
     'Условия боя',
@@ -55,7 +56,7 @@ class _WorkshopState extends State<WorkshopApp> {
   Future<void> connect() async {
     try {
       var dir = Directory.current;
-      while (!File('${dir.path}/tools/headless_server.lua').existsSync()) {
+      while (!File('${dir.path}/app/tools/headless_server.lua').existsSync()) {
         if (dir.parent.path == dir.path) {
           throw StateError('Запустите из репозитория');
         }
@@ -157,6 +158,25 @@ class _WorkshopState extends State<WorkshopApp> {
         mapHeight: mapHeight,
         data: tree!,
         enabled: editable,
+        onHistory: (redo) => perform(() async {
+          if (redo) {
+            await session!.redo();
+          } else {
+            await session!.undo();
+          }
+          if (mounted) setState(() => output = session!.output);
+        }),
+        onJewels: (id) => engine.request('getJewels', {'id': id}),
+        onOptions: (params) => perform(() async {
+          await session!.treeOptions(params);
+          if (mounted) setState(() => output = session!.output);
+        }),
+        onInspect: (id, compare) =>
+            engine.request('getNodeTooltip', {'id': id, 'compare': compare}),
+        onAction: (params) => perform(() async {
+          await session!.treeAction(params);
+          if (mounted) setState(() => output = session!.output);
+        }),
         onToggle: (id) => perform(() async {
           await session!.toggleNode(id);
           if (mounted) setState(() => output = session!.output);
@@ -302,7 +322,8 @@ class _WorkshopState extends State<WorkshopApp> {
     home: Builder(
       builder: (context) => Scaffold(
         appBar: AppBar(
-          title: const Text('◈ Path of Building · Мастерская'),
+          title: const Text('◈ Мастерская сборок'),
+          titleTextStyle: Theme.of(context).textTheme.titleMedium,
           actions: [
             IconButton(
               tooltip: 'Отменить изменение',
@@ -380,7 +401,7 @@ class _WorkshopState extends State<WorkshopApp> {
                                 ? () => perform(() async {
                                     await load(
                                       await File(
-                                        '$root/docs/flutter/fixtures/fireball-basic/build.xml',
+                                        '$root/app/docs/flutter/fixtures/fireball-basic/build.xml',
                                       ).readAsString(),
                                     );
                                   })
@@ -397,53 +418,12 @@ class _WorkshopState extends State<WorkshopApp> {
                       ),
                     ),
             );
-            if (size.maxWidth < 720) {
-              return Column(
-                children: [
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: List.generate(
-                        4,
-                        (i) => Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: ChoiceChip(
-                            label: Text(sections[i]),
-                            selected: section == i,
-                            onSelected: (_) => setState(() => section = i),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  editor,
-                ],
-              );
-            }
-            return Row(
-              children: [
-                NavigationRail(
-                  selectedIndex: section,
-                  extended: size.maxWidth > 1000 && section != 3,
-                  onDestinationSelected: (i) => setState(() => section = i),
-                  destinations: List.generate(
-                    4,
-                    (i) => NavigationRailDestination(
-                      icon: Icon(
-                        [
-                          Icons.analytics_outlined,
-                          Icons.tune,
-                          Icons.import_export,
-                          Icons.account_tree_outlined,
-                        ][i],
-                      ),
-                      label: Text(sections[i]),
-                    ),
-                  ),
-                ),
-                const VerticalDivider(width: 1),
-                editor,
-              ],
+            return WorkshopShell(
+              section: section,
+              onSection: (value) => setState(() => section = value),
+              output: output,
+              tree: tree,
+              editor: editor,
             );
           },
         ),

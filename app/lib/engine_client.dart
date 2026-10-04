@@ -9,8 +9,10 @@ class EngineClient {
   int revision = 0;
   Future<void> start(String root) async {
     _process = await Process.start('python', [
-      'tools/run_headless.py',
-      'tools/headless_server.lua',
+      '-X',
+      'utf8',
+      'app/tools/run_headless.py',
+      'app/tools/headless_server.lua',
     ], workingDirectory: root);
     _process!.stdout
         .transform(utf8.decoder)
@@ -20,7 +22,9 @@ class EngineClient {
           onError: _fail,
           onDone: () => _fail(StateError('Движок завершился')),
         );
-    _process!.stderr.transform(utf8.decoder).listen(stderr.write);
+    _process!.stderr
+        .transform(const Utf8Decoder(allowMalformed: true))
+        .listen(stderr.write);
     await request('initialize');
   }
 

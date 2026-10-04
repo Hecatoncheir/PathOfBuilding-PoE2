@@ -19,7 +19,7 @@ void main() {
         File('${directory.path}/recovery.xml'),
       );
       await session.open(
-        await File('$root/docs/flutter/fixtures/fireball-basic/build.xml')
+        await File('$root/app/docs/flutter/fixtures/fireball-basic/build.xml')
             .readAsString(),
       );
       final initial = session.output['TotalDPS'] as num;
@@ -46,13 +46,27 @@ void main() {
     addTearDown(engine.dispose);
     await engine.start(root);
     final result = await engine.request('loadBuild', {
-      'xml': await File('$root/docs/flutter/fixtures/fireball-basic/build.xml')
+      'xml': await File('$root/app/docs/flutter/fixtures/fireball-basic/build.xml')
           .readAsString(),
     });
     final dps = result['output']['TotalDPS'] as num;
     final tree = await engine.request('getTree');
     final nodes = (tree['nodes'] as List).cast<Map<String, dynamic>>();
     expect(nodes.length, greaterThan(1000));
+    final connectors = tree['connectors'] as List;
+    expect(connectors.length, greaterThan(1000));
+    for (final connector in connectors) {
+      expect(connector['vertices']['Normal'], hasLength(8));
+      expect(connector['uv'], hasLength(8));
+      expect(connector['assets']['Normal'], isNotEmpty);
+    }
+    expect(
+      (tree['backgrounds'] as List).any((bg) => bg['image'] == 'BGTree'),
+      isTrue,
+    );
+    final normal = nodes.firstWhere((node) => node['type'] == 'Normal');
+    expect(normal['targetSize']['width'], 37);
+    expect(normal['targetSize']['overlay']['width'], 54);
     final start = nodes.firstWhere(
       (node) => node['allocated'] == true && node['type'] == 'ClassStart',
     );
