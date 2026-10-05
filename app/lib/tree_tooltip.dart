@@ -1,3 +1,5 @@
+import 'ui_text.dart';
+
 import 'package:flutter/material.dart';
 
 String plainTreeText(String text) =>
@@ -94,12 +96,12 @@ class TreeTooltip extends StatelessWidget {
               ),
               const Divider(),
               Text(
-                'F1 — открыть полную подсказку',
+                tr(context, 'F1 — открыть полную подсказку'),
                 style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
               ),
               if (((detail?['recipe'] as List?) ?? []).isNotEmpty)
                 Text(
-                  'Рецепт: ${(detail!['recipe'] as List).join(' · ')}',
+                  '${tr(context, 'Рецепт: ')}${(detail!['recipe'] as List).join(' · ')}',
                   style: TextStyle(color: colors.primary),
                 ),
               for (final line in lines)
@@ -116,15 +118,21 @@ class TreeTooltip extends StatelessWidget {
                     style: const TextStyle(fontSize: 13, height: 1.35),
                   ),
               if (detail == null && error == null)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: 10),
                   child: LinearProgressIndicator(minHeight: 2),
                 ),
               if (error != null)
-                Text(error!, style: TextStyle(color: colors.error)),
-              const SizedBox(height: 10),
+                Text(
+                  tr(context, error!),
+                  style: TextStyle(color: colors.error),
+                ),
+              SizedBox(height: 10),
               Text(
-                'ЛКМ — назначить / вернуть · ПКМ — атрибут\nCtrl — скрыть · Ctrl+C — копировать · Ctrl+D — сравнение',
+                tr(
+                  context,
+                  'ЛКМ — назначить / вернуть · ПКМ — атрибут\nCtrl — скрыть · Ctrl+C — копировать · Ctrl+D — сравнение',
+                ),
                 style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
               ),
             ],

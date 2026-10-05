@@ -9,6 +9,8 @@ import 'package:pob_workshop/engine_client.dart';
 import 'package:pob_workshop/passive_tree.dart';
 import 'package:pob_workshop/tree_art.dart';
 import 'package:pob_workshop/main.dart';
+import 'package:pob_workshop/workshop_shell.dart';
+import 'package:pob_workshop/workshop_toolbar.dart';
 
 void main() {
   testWidgets('Игровые текстуры отображаются на настоящем дереве', (
@@ -22,6 +24,7 @@ void main() {
     addTearDown(engine.dispose);
     final root = Directory.current.parent.path;
     late Map<String, dynamic> detail;
+    late Map<String, dynamic> snapshot;
     final data = await tester.runAsync(() async {
       final font = FontLoader('PreviewFont');
       font.addFont(
@@ -62,6 +65,7 @@ void main() {
       });
       final art = await TreeArt.load('0_5');
       expect(art.length, greaterThan(500));
+      snapshot = await engine.request('getSnapshot');
       final tree = await engine.request('getTree');
       final node = (tree['nodes'] as List).firstWhere(
         (n) => n['name'] == 'Melee Damage',
@@ -114,5 +118,55 @@ void main() {
       matchesGoldenFile('goldens/tree-tooltip.png'),
     );
     await mouse.removePointer();
+    tester.view.physicalSize = const Size(1600, 1000);
+    for (final dark in [true, false]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: gruvbox(dark).copyWith(
+            textTheme: gruvbox(dark).textTheme.apply(fontFamily: 'PreviewFont'),
+          ),
+          home: RepaintBoundary(
+            key: const ValueKey('shell-preview'),
+            child: Scaffold(
+              appBar: WorkshopToolbar(
+                search: () {},
+                importExport: () {},
+                settings: () {},
+                mode: dark ? ThemeMode.dark : ThemeMode.light,
+                onTheme: (_) {},
+              ),
+              body: WorkshopShell(
+                key: ValueKey(dark),
+                section: 3,
+                onSection: (_) {},
+                output: Map<String, dynamic>.from(snapshot['output']),
+                buildInfo: Map<String, dynamic>.from(snapshot['buildInfo']),
+                tree: data,
+                editor: Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: PassiveTree(
+                      key: ValueKey('tree-$dark'),
+                      fillViewport: true,
+                      data: data,
+                      enabled: true,
+                      onToggle: (_) async {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Всё дерево'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await expectLater(
+        find.byKey(const ValueKey('shell-preview')),
+        matchesGoldenFile('goldens/workshop-${dark ? 'dark' : 'light'}.png'),
+      );
+    }
   }, skip: !Platform.isWindows);
 }

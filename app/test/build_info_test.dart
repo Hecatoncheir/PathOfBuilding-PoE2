@@ -25,6 +25,12 @@ void main() {
     addTearDown(() => temporary.delete(recursive: true));
     final session = BuildSession(engine, File('${temporary.path}/session.xml'));
     await session.open(xml);
+    final xmlBeforeOverview = await session.export();
+    final overview = await engine.request('getWorkbench');
+    expect(overview['groups'], hasLength(2));
+    expect(overview['items'], isA<List>());
+    expect(overview['notes'], isA<String>());
+    expect(await session.export(), xmlBeforeOverview);
     final before = await engine.request('getSnapshot');
     expect(before['buildInfo']['class'], 'Ranger');
     expect(before['buildInfo']['groups']['entries'], hasLength(2));

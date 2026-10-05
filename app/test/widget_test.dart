@@ -46,8 +46,9 @@ void main() {
     addTearDown(engine.dispose);
     await engine.start(root);
     final result = await engine.request('loadBuild', {
-      'xml': await File('$root/app/docs/flutter/fixtures/fireball-basic/build.xml')
-          .readAsString(),
+      'xml': await File(
+        '$root/app/docs/flutter/fixtures/fireball-basic/build.xml',
+      ).readAsString(),
     });
     final dps = result['output']['TotalDPS'] as num;
     final tree = await engine.request('getTree');

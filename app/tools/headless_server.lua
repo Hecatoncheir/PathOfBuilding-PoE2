@@ -295,6 +295,8 @@ function methods.getTree()
 			end
 		end
 	end
+	-- Устойчивый порядок отрисовки перекрывающихся узлов.
+	table.sort(nodes, function(a, b) return a.id < b.id end)
 	local backgrounds = {}
 	local function addBackground(data, brightness, rotation)
 		backgrounds[#backgrounds + 1] = { image = data.image, x = data.x, y = data.y, width = data.width * 2, height = data.height * 2, brightness = brightness or 1, rotation = rotation or 0 }
@@ -334,6 +336,10 @@ function methods.getTree()
 		for state, points in pairs(connector.vert) do vertices[state] = { unpack(points, 1, 8) } end
 		connectors[#connectors + 1] = { a = connector.nodeId1, b = connector.nodeId2, vertices = vertices, uv = { unpack(connector.c, 9, 16) }, assets = connector.assetNames }
 	end
+	table.sort(connectors, function(a, b)
+		if a.a == b.a then return a.b < b.b end
+		return a.a < b.a
+	end)
 	local classes, specs = {}, {}
 	for id, class in pairs(build.spec.tree.classes) do
 		local ascendancies = {}
@@ -358,7 +364,7 @@ function methods.toggleNode(params)
 	return snapshot()
 end
 function methods.initialize()
-	return { methods = { "initialize", "loadBuild", "getSnapshot", "setCustomMods", "exportBuild", "selectMainSkill", "getTree", "getNodeTooltip", "getJewels", "treeOptions", "treeAction", "toggleNode", "shutdown" }, platform = "windows-experimental" }
+	return { methods = { "initialize", "loadBuild", "getSnapshot", "getWorkbench", "setCustomMods", "exportBuild", "selectMainSkill", "getTree", "getNodeTooltip", "getJewels", "treeOptions", "treeAction", "toggleNode", "shutdown" }, platform = "windows-experimental" }
 end
 function methods.loadBuild(params)
 	validateXML(params.xml)
@@ -390,6 +396,18 @@ function methods.selectMainSkill(params)
 	control:SetSel(control:ListIndexToDropIndex(params.id, 0))
 	runCallback("OnFrame")
 	return snapshot()
+end
+function methods.getWorkbench()
+	local items, groups = {}, {}
+	for id, item in pairs(build.itemsTab.items) do
+		items[#items + 1] = { id = id, name = item.title or item.name or item.baseName,
+			base = item.baseName, rarity = item.rarity }
+	end
+	table.sort(items, function(a, b) return a.id < b.id end)
+	for id, group in ipairs(build.skillsTab.socketGroupList) do
+		groups[#groups + 1] = { id = id, label = tostring(group.displayLabel):gsub("%^x%x%x%x%x%x%x", ""):gsub("%^%d", "") }
+	end
+	return { items = items, groups = groups, notes = build.notesTab.controls.edit.buf }
 end
 function methods.exportBuild()
 	return { xml = assert(build:SaveDB("Flutter session")) }

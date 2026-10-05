@@ -1,3 +1,6 @@
+import 'workshop_components.dart';
+import 'ui_text.dart';
+
 import 'package:flutter/material.dart';
 
 class TreeSettings extends StatelessWidget {
@@ -10,16 +13,18 @@ class TreeSettings extends StatelessWidget {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Удалить набор дерева?'),
-          content: const Text('Действие можно отменить через историю сборки.'),
+          title: Text(tr(context, 'Удалить набор дерева?')),
+          content: Text(
+            tr(context, 'Действие можно отменить через историю сборки.'),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Отмена'),
+              child: Text(tr(context, 'Отмена')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Удалить'),
+              child: Text(tr(context, 'Удалить')),
             ),
           ],
         ),
@@ -33,12 +38,12 @@ class TreeSettings extends StatelessWidget {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Название набора'),
+        title: Text(tr(context, 'Название набора')),
         content: TextField(controller: text, autofocus: true, maxLength: 100),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
+            child: Text(tr(context, 'Отмена')),
           ),
           FilledButton(
             onPressed: () {
@@ -46,7 +51,7 @@ class TreeSettings extends StatelessWidget {
                 Navigator.pop(context, text.text.trim());
               }
             },
-            child: const Text('Сохранить'),
+            child: Text(tr(context, 'Сохранить')),
           ),
         ],
       ),
@@ -70,22 +75,25 @@ class TreeSettings extends StatelessWidget {
       choice = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Изменить класс'),
-          content: const Text(
-            'Можно соединить дерево со стартом нового класса или сбросить назначенные умения. Изменение сохраняется в истории отмены.',
+          title: Text(tr(context, 'Изменить класс')),
+          content: Text(
+            tr(
+              context,
+              'Можно соединить дерево со стартом нового класса или сбросить назначенные умения. Изменение сохраняется в истории отмены.',
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Отмена'),
+              child: Text(tr(context, 'Отмена')),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, 'reset'),
-              child: const Text('Сбросить дерево'),
+              child: Text(tr(context, 'Сбросить дерево')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, 'connect'),
-              child: const Text('Соединить путь'),
+              child: Text(tr(context, 'Соединить путь')),
             ),
           ],
         ),
@@ -112,16 +120,16 @@ class TreeSettings extends StatelessWidget {
     }
 
     return AlertDialog(
-      title: const Text('Настройки дерева'),
+      title: Text(tr(context, 'Настройки дерева')),
       content: SizedBox(
         width: 440,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<int>(
+              WorkshopSelect<int>(
                 initialValue: data['classId'] as int?,
-                decoration: const InputDecoration(labelText: 'Класс'),
+                decoration: InputDecoration(labelText: tr(context, 'Класс')),
                 items: [
                   for (final c in classes)
                     DropdownMenuItem(
@@ -133,10 +141,12 @@ class TreeSettings extends StatelessWidget {
                   if (id != null) changeClass(context, id);
                 },
               ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<int>(
+              SizedBox(height: 16),
+              WorkshopSelect<int>(
                 initialValue: data['ascendancyId'] as int?,
-                decoration: const InputDecoration(labelText: 'Восхождение'),
+                decoration: InputDecoration(
+                  labelText: tr(context, 'Восхождение'),
+                ),
                 items: [
                   for (final asc in (current?['ascendancies'] as List?) ?? [])
                     DropdownMenuItem(
@@ -148,10 +158,12 @@ class TreeSettings extends StatelessWidget {
                   if (id != null) apply({'ascendancy': id});
                 },
               ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<int>(
+              SizedBox(height: 16),
+              WorkshopSelect<int>(
                 initialValue: data['activeSpec'] as int?,
-                decoration: const InputDecoration(labelText: 'Набор дерева'),
+                decoration: InputDecoration(
+                  labelText: tr(context, 'Набор дерева'),
+                ),
                 items: [
                   for (final spec in (data['specs'] as List?) ?? [])
                     DropdownMenuItem(
@@ -163,38 +175,38 @@ class TreeSettings extends StatelessWidget {
                   if (id != null) apply({'spec': id});
                 },
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               Wrap(
                 spacing: 8,
                 children: [
                   TextButton(
                     onPressed: () => manage(context, 'new'),
-                    child: const Text('Новый'),
+                    child: Text(tr(context, 'Новый')),
                   ),
                   TextButton(
                     onPressed: () => manage(context, 'clone'),
-                    child: const Text('Копия'),
+                    child: Text(tr(context, 'Копия')),
                   ),
                   TextButton(
                     onPressed: () => manage(context, 'rename'),
-                    child: const Text('Переименовать'),
+                    child: Text(tr(context, 'Переименовать')),
                   ),
                   if (((data['specs'] as List?) ?? []).length > 1)
                     TextButton(
                       onPressed: () => manage(context, 'delete'),
-                      child: const Text('Удалить'),
+                      child: Text(tr(context, 'Удалить')),
                     ),
                 ],
               ),
-              DropdownButtonFormField<int>(
+              WorkshopSelect<int>(
                 initialValue: data['compareSpec'] as int? ?? 0,
-                decoration: const InputDecoration(
-                  labelText: 'Сравнить с набором',
+                decoration: InputDecoration(
+                  labelText: tr(context, 'Сравнить с набором'),
                 ),
                 items: [
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: 0,
-                    child: Text('Без сравнения'),
+                    child: Text(tr(context, 'Без сравнения')),
                   ),
                   for (final spec in (data['specs'] as List?) ?? [])
                     DropdownMenuItem(
@@ -206,37 +218,40 @@ class TreeSettings extends StatelessWidget {
                   if (id != null) apply({'compare': id});
                 },
               ),
-              const SizedBox(height: 24),
-              const Text('Оружейный режим назначения'),
-              const SizedBox(height: 8),
+              SizedBox(height: 24),
+              Text(tr(context, 'Оружейный режим назначения')),
+              SizedBox(height: 8),
               SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 0, label: Text('Общее')),
-                  ButtonSegment(value: 1, label: Text('Набор 1')),
-                  ButtonSegment(value: 2, label: Text('Набор 2')),
+                segments: [
+                  ButtonSegment(value: 0, label: Text(tr(context, 'Общее'))),
+                  ButtonSegment(value: 1, label: Text(tr(context, 'Набор 1'))),
+                  ButtonSegment(value: 2, label: Text(tr(context, 'Набор 2'))),
                 ],
                 selected: {data['mode'] as int? ?? 0},
                 onSelectionChanged: (selection) =>
                     apply({'mode': selection.single}),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               TextButton.icon(
                 onPressed: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Сбросить дерево?'),
-                      content: const Text(
-                        'Все назначения будут удалены. Отмена доступна через историю сборки.',
+                      title: Text(tr(context, 'Сбросить дерево?')),
+                      content: Text(
+                        tr(
+                          context,
+                          'Все назначения будут удалены. Отмена доступна через историю сборки.',
+                        ),
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Отмена'),
+                          child: Text(tr(context, 'Отмена')),
                         ),
                         FilledButton(
                           onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Сбросить'),
+                          child: Text(tr(context, 'Сбросить')),
                         ),
                       ],
                     ),
@@ -246,7 +261,7 @@ class TreeSettings extends StatelessWidget {
                   }
                 },
                 icon: const Icon(Icons.restart_alt),
-                label: const Text('Сбросить назначения'),
+                label: Text(tr(context, 'Сбросить назначения')),
               ),
             ],
           ),
@@ -255,7 +270,7 @@ class TreeSettings extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Закрыть'),
+          child: Text(tr(context, 'Закрыть')),
         ),
       ],
     );
@@ -280,7 +295,7 @@ class _TreeJewelPickerState extends State<TreeJewelPicker> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Самоцвет в гнезде'),
+    title: Text(tr(context, 'Самоцвет в гнезде')),
     content: SizedBox(
       width: 480,
       child: SingleChildScrollView(
@@ -291,7 +306,9 @@ class _TreeJewelPickerState extends State<TreeJewelPicker> {
               future: future,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Text('Ошибка загрузки: ${snapshot.error}');
+                  return Text(
+                    '${tr(context, 'Ошибка загрузки: ')}${snapshot.error}',
+                  );
                 }
                 if (!snapshot.hasData) return const LinearProgressIndicator();
                 final items = snapshot.data!['items'] as List;
@@ -310,12 +327,15 @@ class _TreeJewelPickerState extends State<TreeJewelPicker> {
                             Navigator.pop(context, {'item': item['id']}),
                       ),
                     if (items.isEmpty)
-                      const Text(
-                        'В сборке пока нет подходящих самоцветов. Вставьте текст предмета ниже.',
+                      Text(
+                        tr(
+                          context,
+                          'В сборке пока нет подходящих самоцветов. Вставьте текст предмета ниже.',
+                        ),
                       ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, {'item': 0}),
-                      child: const Text('Очистить гнездо'),
+                      child: Text(tr(context, 'Очистить гнездо')),
                     ),
                   ],
                 );
@@ -326,8 +346,8 @@ class _TreeJewelPickerState extends State<TreeJewelPicker> {
               controller: raw,
               minLines: 4,
               maxLines: 8,
-              decoration: const InputDecoration(
-                labelText: 'Текст самоцвета из игры / PoB',
+              decoration: InputDecoration(
+                labelText: tr(context, 'Текст самоцвета из игры / PoB'),
               ),
             ),
           ],
@@ -337,7 +357,7 @@ class _TreeJewelPickerState extends State<TreeJewelPicker> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Отмена'),
+        child: Text(tr(context, 'Отмена')),
       ),
       FilledButton(
         onPressed: () {
@@ -345,7 +365,7 @@ class _TreeJewelPickerState extends State<TreeJewelPicker> {
             Navigator.pop(context, {'raw': raw.text});
           }
         },
-        child: const Text('Вставить в гнездо'),
+        child: Text(tr(context, 'Вставить в гнездо')),
       ),
     ],
   );

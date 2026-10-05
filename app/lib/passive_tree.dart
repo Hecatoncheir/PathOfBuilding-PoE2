@@ -1,3 +1,5 @@
+import 'ui_text.dart';
+
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'dart:async';
@@ -18,6 +20,7 @@ class PassiveTree extends StatefulWidget {
     required this.onToggle,
     required this.enabled,
     this.mapHeight = 500,
+    this.fillViewport = false,
     this.onInspect,
     this.onAction,
     this.onOptions,
@@ -28,6 +31,7 @@ class PassiveTree extends StatefulWidget {
   final Future<void> Function(int) onToggle;
   final bool enabled;
   final double mapHeight;
+  final bool fillViewport;
   final Future<Map<String, dynamic>> Function(int, bool)? onInspect;
   final Future<void> Function(Map<String, dynamic>)? onAction;
   final Future<void> Function(Map<String, dynamic>)? onOptions;
@@ -248,26 +252,29 @@ class _PassiveTreeState extends State<PassiveTree>
   Future<int?> chooseAttribute() => showDialog<int>(
     context: context,
     builder: (context) => SimpleDialog(
-      title: const Text('Выберите атрибут'),
+      title: Text(tr(context, 'Выберите атрибут')),
       children: [
         for (final option in [
-          (1, 'Сила', const Color(0xfffb4934)),
-          (2, 'Ловкость', const Color(0xffb8bb26)),
-          (3, 'Интеллект', const Color(0xff83a598)),
+          (1, tr(context, 'Сила'), const Color(0xfffb4934)),
+          (2, tr(context, 'Ловкость'), const Color(0xffb8bb26)),
+          (3, tr(context, 'Интеллект'), const Color(0xff83a598)),
         ])
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, option.$1),
             child: Text(option.$2, style: TextStyle(color: option.$3)),
           ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.all(20),
           child: Text(
-            'Удерживайте 2 / S, 3 / D или 1 / I при нажатии.\nПКМ меняет атрибут назначенного узла.',
+            tr(
+              context,
+              'Удерживайте 2 / S, 3 / D или 1 / I при нажатии.\nПКМ меняет атрибут назначенного узла.',
+            ),
           ),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
+          child: Text(tr(context, 'Отмена')),
         ),
       ],
     ),
@@ -276,7 +283,7 @@ class _PassiveTreeState extends State<PassiveTree>
   Future<int?> chooseMastery(Map<String, dynamic> node) => showDialog<int>(
     context: context,
     builder: (context) => SimpleDialog(
-      title: const Text('Выберите эффект мастерства'),
+      title: Text(tr(context, 'Выберите эффект мастерства')),
       children: [
         for (final option in (node['masteryEffects'] as List?) ?? [])
           SimpleDialogOption(
@@ -296,16 +303,16 @@ class _PassiveTreeState extends State<PassiveTree>
         content: TextField(
           controller: text,
           maxLines: 5,
-          decoration: const InputDecoration(labelText: 'Заметка к узлу'),
+          decoration: InputDecoration(labelText: tr(context, 'Заметка к узлу')),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
+            child: Text(tr(context, 'Отмена')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, text.text),
-            child: const Text('Сохранить'),
+            child: Text(tr(context, 'Сохранить')),
           ),
         ],
       ),
@@ -348,7 +355,7 @@ class _PassiveTreeState extends State<PassiveTree>
                   maxHeight: MediaQuery.sizeOf(context).height * .65,
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 children: [
@@ -361,8 +368,8 @@ class _PassiveTreeState extends State<PassiveTree>
                         : null,
                     child: Text(
                       node['allocated'] == true
-                          ? 'Вернуть узел'
-                          : 'Назначить путь',
+                          ? tr(context, 'Вернуть узел')
+                          : tr(context, 'Назначить путь'),
                     ),
                   ),
                   if (widget.onAction != null)
@@ -373,7 +380,7 @@ class _PassiveTreeState extends State<PassiveTree>
                               applyNode(id, secondary: true);
                             }
                           : null,
-                      child: const Text('Дополнительное действие'),
+                      child: Text(tr(context, 'Дополнительное действие')),
                     ),
                 ],
               ),
@@ -523,8 +530,26 @@ class _PassiveTreeState extends State<PassiveTree>
     super.dispose();
   }
 
+  Widget mapFrame(Widget child) => widget.fillViewport
+      ? Expanded(child: child)
+      : SizedBox(height: widget.mapHeight, child: child);
+
+  Widget compactPanel(Widget child, double height) => widget.fillViewport
+      ? ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: height),
+          child: SingleChildScrollView(child: child),
+        )
+      : child;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => treeBody(
+      context,
+      compact: widget.fillViewport && constraints.maxHeight < 650,
+    ),
+  );
+
+  Widget treeBody(BuildContext context, {bool compact = false}) {
     final version = widget.data['version'] as String;
     if (version != artVersion) {
       artVersion = version;
@@ -540,12 +565,14 @@ class _PassiveTreeState extends State<PassiveTree>
           })
           .catchError((Object error) {
             if (mounted) {
-              setState(() => artError = 'Текстуры этой версии недоступны');
+              setState(
+                () => artError = tr(context, 'Текстуры этой версии недоступны'),
+              );
             }
           });
     }
     final nodes = (widget.data['nodes'] as List).cast<Map<String, dynamic>>();
-    if (nodes.isEmpty) return const Text('Дерево пустое');
+    if (nodes.isEmpty) return Text(tr(context, 'Дерево пустое'));
     if (!identical(geometryData, widget.data)) {
       geometryData = widget.data;
       geometry = TreeGeometry(nodes);
@@ -574,7 +601,7 @@ class _PassiveTreeState extends State<PassiveTree>
                 TextSpan(
                   children: treeTextSpans(
                     widget.data['pointDisplay'] as String? ??
-                        'Дерево $version · ${nodes.length} узлов',
+                        '${tr(context, 'Дерево')} $version · ${nodes.length} ${tr(context, 'узлов')}',
                     Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -585,14 +612,35 @@ class _PassiveTreeState extends State<PassiveTree>
                 message: ((widget.data['warnings'] as List).map(
                   (line) => plainTreeText(line.toString()),
                 )).join('\n'),
-                child: Icon(
-                  Icons.warning_amber,
-                  color: Theme.of(context).colorScheme.error,
+                child: IconButton(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text(tr(context, 'Предупреждения')),
+                      content: SingleChildScrollView(
+                        child: Text(
+                          ((widget.data['warnings'] as List).map(
+                            (line) => plainTreeText(line.toString()),
+                          )).join('\n'),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(tr(context, 'Закрыть')),
+                        ),
+                      ],
+                    ),
+                  ),
+                  icon: Icon(
+                    Icons.warning_amber,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                 ),
               ),
             if (widget.onOptions != null)
               IconButton(
-                tooltip: 'Класс, набор и оружейные режимы',
+                tooltip: tr(context, 'Класс, набор и оружейные режимы'),
                 onPressed: widget.enabled
                     ? () => showDialog<void>(
                         context: context,
@@ -606,36 +654,54 @@ class _PassiveTreeState extends State<PassiveTree>
               ),
           ],
         ),
-        const SizedBox(height: 12),
-        if (artError != null) Text(artError!),
+        SizedBox(height: 12),
+        if (artError != null && !compact) Text(tr(context, artError!)),
         TextField(
           focusNode: searchFocus,
-          decoration: const InputDecoration(
-            labelText: 'Поиск по названию и свойствам',
+          decoration: InputDecoration(
+            labelText: tr(context, 'Поиск по названию и свойствам'),
             prefixIcon: Icon(Icons.search),
+            suffixIcon: compact && matches.isNotEmpty
+                ? PopupMenuButton<int>(
+                    tooltip: tr(context, 'Результаты поиска'),
+                    onSelected: (id) {
+                      setState(() => selected = id);
+                      center(positions[id]!, 2);
+                    },
+                    itemBuilder: (_) => [
+                      for (final node in matches)
+                        PopupMenuItem(
+                          value: node['id'] as int,
+                          child: Text(node['name'] as String),
+                        ),
+                    ],
+                  )
+                : null,
           ),
           onChanged: (value) => setState(() => query = value),
         ),
-        if (matches.isNotEmpty)
-          Wrap(
-            children: matches
-                .map(
-                  (node) => TextButton(
-                    onPressed: () {
-                      setState(() => selected = node['id'] as int);
-                      center(positions[selected]!, 2);
-                    },
-                    child: Text(node['name'] as String),
-                  ),
-                )
-                .toList(),
+        if (matches.isNotEmpty && !compact)
+          compactPanel(
+            Wrap(
+              children: matches
+                  .map(
+                    (node) => TextButton(
+                      onPressed: () {
+                        setState(() => selected = node['id'] as int);
+                        center(positions[selected]!, 2);
+                      },
+                      child: Text(node['name'] as String),
+                    ),
+                  )
+                  .toList(),
+            ),
+            80,
           ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: widget.mapHeight,
-          child: LayoutBuilder(
+        SizedBox(height: 12),
+        mapFrame(
+          LayoutBuilder(
             builder: (context, constraints) {
-              viewport = Size(constraints.maxWidth, widget.mapHeight);
+              viewport = Size(constraints.maxWidth, constraints.maxHeight);
               if (!positioned) {
                 positioned = true;
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -806,7 +872,7 @@ class _PassiveTreeState extends State<PassiveTree>
                                   ),
                                 ),
                             child: hovered == null || hideTooltip
-                                ? const SizedBox.shrink()
+                                ? SizedBox.shrink()
                                 : TreeTooltip(
                                     key: ValueKey(hovered),
                                     node: nodeMap[hovered]!,
@@ -837,51 +903,87 @@ class _PassiveTreeState extends State<PassiveTree>
                   8,
                 ),
               ),
-              child: const Text('Всё дерево'),
+              child: Text(tr(context, 'Всё дерево')),
             ),
             IconButton(
               onPressed: () => zoom(1.3),
-              tooltip: 'Увеличить дерево',
+              tooltip: tr(context, 'Увеличить дерево'),
               icon: const Icon(Icons.add),
             ),
             IconButton(
               onPressed: () => zoom(1 / 1.3),
-              tooltip: 'Уменьшить дерево',
+              tooltip: tr(context, 'Уменьшить дерево'),
               icon: const Icon(Icons.remove),
             ),
-            const Text('Перетаскивание · колесо / pinch zoom'),
+            if (!compact)
+              Text(tr(context, 'Перетаскивание · колесо / pinch zoom')),
           ],
         ),
-        if (chosen != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    chosen['name'] as String,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text((chosen['stats'] as List).join('\n')),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: widget.enabled
-                        ? () => applyNode(chosen['id'] as int)
-                        : null,
-                    child: Text(
-                      chosen['allocated'] == true
-                          ? 'Вернуть узел и зависимые узлы'
-                          : 'Назначить путь к узлу',
+        if (chosen != null && !compact)
+          compactPanel(
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      chosen['name'] as String,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
-                ],
+                    Text((chosen['stats'] as List).join('\n')),
+                    SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: widget.enabled
+                          ? () => applyNode(chosen['id'] as int)
+                          : null,
+                      child: Text(
+                        chosen['allocated'] == true
+                            ? tr(context, 'Вернуть узел и зависимые узлы')
+                            : tr(context, 'Назначить путь к узлу'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
+            160,
           ),
-        const Text(
-          'ЛКМ — назначить / вернуть · ПКМ — атрибут · СКМ — перемещение · Shift — проложить путь',
-        ),
+        if (chosen != null && compact)
+          SizedBox(
+            height: 48,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    chosen['name'] as String,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                FilledButton(
+                  onPressed: widget.enabled
+                      ? () => applyNode(chosen['id'] as int)
+                      : null,
+                  child: Text(
+                    tr(
+                      context,
+                      chosen['allocated'] == true
+                          ? 'Вернуть узел'
+                          : 'Назначить путь',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (!compact)
+          Text(
+            tr(
+              context,
+              'ЛКМ — назначить / вернуть · ПКМ — атрибут · СКМ — перемещение · Shift — проложить путь',
+            ),
+          ),
       ],
     );
   }
