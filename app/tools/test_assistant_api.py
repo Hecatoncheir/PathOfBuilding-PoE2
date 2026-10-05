@@ -75,6 +75,17 @@ class AssistantAPI(unittest.TestCase):
         self.assertEqual(len(first["entries"]), 2)
         self.assertNotEqual(first["entries"], second["entries"])
 
+    def test_node_catalog_after_ascendancy_selection(self):
+        api = self.api
+        api.call("createBuild", {"classId": 2, "level": 90})
+        api.call("treeOptions", {"ascendancy": 2})
+        choices = api.call("getCatalog", {"kind": "nodes", "query": "Concoction"})
+        self.assertTrue(any(node["name"] == "Brew Concoction" for node in choices["entries"]))
+        attributes = api.call("getCatalog", {"kind": "nodes", "query": "Attribute", "limit": 200})
+        options = [node["attributeOptions"] for node in attributes["entries"] if node.get("attributeOptions")]
+        self.assertTrue(options)
+        self.assertTrue(all(isinstance(option["name"], str) for choices in options for option in choices))
+
     def test_tree_and_warnings_from_lua(self):
         api = self.api
         api.call("createBuild", {"classId": 2, "level": 90})

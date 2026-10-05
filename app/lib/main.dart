@@ -1,3 +1,4 @@
+import 'new_build_dialog.dart';
 import 'build_library.dart';
 import 'build_library_view.dart';
 import 'ui_text.dart';
@@ -47,6 +48,8 @@ class _WorkshopState extends State<WorkshopApp> {
   Map<String, dynamic> workbench = {};
   Map<String, dynamic>? tree;
   String status = 'Подключение к Lua…';
+  String activeFilePath = '', appliedMods = '', xmlBaseline = '';
+  bool get hasDraft => mods.text != appliedMods || xml.text != xmlBaseline;
   String? root;
   bool busy = true, ready = false;
   late final preferences = widget.preferences ?? UiPreferences.local();
@@ -115,23 +118,25 @@ class _WorkshopState extends State<WorkshopApp> {
         setState(() {
           output = session!.output;
           mods.clear();
+          appliedMods = '';
         });
       }
     });
   }
 
-  Future<void> saveBuild(BuildContext context) async {
-    if (!editable) return;
-    if (filePath.text.trim().isEmpty) {
+  Future<bool> saveBuild(BuildContext context, {String? path}) async {
+    if (!editable) return false;
+    final savePath = path ?? filePath.text.trim();
+    if (savePath.isEmpty) {
       setState(() {
         section = 2;
         status = 'Укажите путь файла';
       });
-      return;
+      return false;
     }
-    final target = File(filePath.text.trim());
+    final target = File(savePath);
     if (await target.exists()) {
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -149,9 +154,18 @@ class _WorkshopState extends State<WorkshopApp> {
           ],
         ),
       );
-      if (confirmed != true) return;
+      if (confirmed != true) return false;
     }
-    if (mounted) await perform(() => session!.save(target));
+    bool saved = false;
+    if (mounted) {
+      await perform(() async {
+        await session!.save(target);
+        activeFilePath = target.path;
+        saved = true;
+        await library.remember(target);
+      });
+    }
+    return saved;
   }
 
   Future<void> interfaceSettings(BuildContext context) async {
@@ -235,20 +249,89 @@ class _WorkshopState extends State<WorkshopApp> {
         setState(() => status = 'Результат Lua · ревизия ${engine.revision}');
       }
     } catch (error) {
-      if (mounted) setState(() => status = '$error');
+      if (mounted) {
+        setState(() {
+          status = '$error';
+          if (session?.output.isNotEmpty == true) output = session!.output;
+        });
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
   }
 
-  Future<void> load(String text) async {
-    await session!.open(text);
-    if (mounted) {
+  Future<bool> mayReplace(
+    BuildContext context, {
+    bool importingXml = false,
+    bool showTree = false,
+  }) async {
+    final draft =
+        mods.text != appliedMods || (!importingXml && xml.text != xmlBaseline);
+    if (session?.hasUnsavedChanges != true && !draft) return true;
+    final choice = await confirmBuildReplacement(context, hasDraft: draft);
+    if (!context.mounted) return false;
+    if (choice == 'discard') return true;
+    if (choice == 'save') return saveBuild(context, path: activeFilePath);
+    return false;
+  }
+
+  Future<void> openBuild(
+    BuildContext context,
+    Future<String> Function() read, {
+    String? path,
+    bool importingXml = false,
+    bool showTree = false,
+  }) async {
+    if (!ready ||
+        busy ||
+        !await mayReplace(context, importingXml: importingXml)) {
+      return;
+    }
+    await perform(() async {
+      final text = await read();
+      await session!.open(text, saved: path != null);
+      if (mounted) {
+        setState(() {
+          output = session!.output;
+          mods.clear();
+          appliedMods = '';
+          xml.text = text;
+          xmlBaseline = text;
+          activeFilePath = path ?? '';
+          filePath.text = activeFilePath;
+          if (showTree) section = 3;
+        });
+      }
+      if (path != null) await library.remember(File(path));
+    });
+  }
+
+  Future<void> createBuild(BuildContext context) async {
+    if (!ready || busy || !await mayReplace(context)) return;
+    List<Map<String, dynamic>> classes = [];
+    await perform(() async {
+      final catalog = await engine.request('getCatalog', {'kind': 'classes'});
+      classes = (catalog['entries'] as List).cast<Map<String, dynamic>>();
+    });
+    if (!context.mounted || classes.isEmpty) return;
+    final params = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => NewBuildDialog(classes: classes),
+    );
+    if (params == null || !mounted) return;
+    await perform(() async {
+      await session!.create(params);
       setState(() {
         output = session!.output;
+        activeFilePath = '';
+        filePath.clear();
         mods.clear();
+        appliedMods = '';
+        xml.clear();
+        xmlBaseline = '';
+        section = 3;
       });
-    }
+    });
   }
 
   bool get editable => ready && !busy && output.isNotEmpty;
@@ -390,28 +473,39 @@ class _WorkshopState extends State<WorkshopApp> {
       return BuildLibraryView(
         library: library,
         onRename: (source, target) {
-          if (File(filePath.text).absolute.path == source.absolute.path) {
-            setState(() => filePath.text = target.path);
+          if (activeFilePath.isNotEmpty &&
+              File(activeFilePath).absolute.path == source.absolute.path) {
+            setState(() {
+              activeFilePath = target.path;
+              filePath.text = target.path;
+            });
           }
         },
         enabled: ready && !busy,
         canSave: editable,
-        onOpen: (file) => perform(() async {
-          await load(await file.readAsString());
-          if (mounted) {
-            setState(() {
-              filePath.text = file.path;
-              section = 3;
-            });
-          }
-        }),
-        onSave: (folder, name) async {
-          final file = await library.save(
-            folder,
-            name,
-            await session!.export(),
+        onNew: () => createBuild(context),
+        onOpen: (file) async {
+          await openBuild(
+            context,
+            () => BuildSession.readXml(file),
+            path: file.path,
+            showTree: true,
           );
-          if (mounted) setState(() => filePath.text = file.path);
+        },
+        onSave: (folder, name) async {
+          if (!editable) return;
+          await perform(() async {
+            final exported = await session!.export();
+            final file = await library.save(folder, name, exported);
+            session!.markSaved(exported);
+            if (mounted) {
+              setState(() {
+                activeFilePath = file.path;
+                filePath.text = file.path;
+              });
+            }
+            await library.remember(file);
+          });
         },
       );
     }
@@ -433,6 +527,7 @@ class _WorkshopState extends State<WorkshopApp> {
         children: [
           TextField(
             controller: mods,
+            onChanged: (_) => setState(() {}),
             minLines: 4,
             maxLines: 8,
             decoration: InputDecoration(
@@ -446,6 +541,7 @@ class _WorkshopState extends State<WorkshopApp> {
             onPressed: editable
                 ? () => perform(() async {
                     await session!.modify(mods.text);
+                    appliedMods = mods.text;
                     if (mounted) {
                       setState(() => output = session!.output);
                     }
@@ -476,12 +572,14 @@ class _WorkshopState extends State<WorkshopApp> {
           children: [
             OutlinedButton(
               onPressed: ready && !busy
-                  ? () => perform(() async {
-                      final text = await File(filePath.text.trim())
-                          .readAsString();
-                      await load(text);
-                      xml.text = text;
-                    })
+                  ? () {
+                      final path = filePath.text.trim();
+                      openBuild(
+                        context,
+                        () => BuildSession.readXml(File(path)),
+                        path: path,
+                      );
+                    }
                   : null,
               child: Text(tr(context, 'Открыть файл')),
             ),
@@ -494,6 +592,7 @@ class _WorkshopState extends State<WorkshopApp> {
         SizedBox(height: 24),
         TextField(
           controller: xml,
+          onChanged: (_) => setState(() {}),
           minLines: 8,
           maxLines: 14,
           decoration: InputDecoration(
@@ -507,7 +606,10 @@ class _WorkshopState extends State<WorkshopApp> {
           children: [
             FilledButton(
               onPressed: ready && !busy
-                  ? () => perform(() => load(xml.text))
+                  ? () {
+                      final text = xml.text;
+                      openBuild(context, () async => text, importingXml: true);
+                    }
                   : null,
               child: Text(tr(context, 'Открыть XML')),
             ),
@@ -516,6 +618,7 @@ class _WorkshopState extends State<WorkshopApp> {
                   ? () => perform(() async {
                       final result = await engine.request('exportBuild');
                       xml.text = result['xml'] as String;
+                      xmlBaseline = xml.text;
                     })
                   : null,
               child: Text(tr(context, 'Получить XML')),
@@ -575,9 +678,10 @@ class _WorkshopState extends State<WorkshopApp> {
             redo: editable && session!.canRedo ? () => history(true) : null,
             save: editable ? () => saveBuild(context) : null,
             restore: ready && !busy
-                ? () => perform(() async {
-                    await load(await session!.recoveryFile.readAsString());
-                  })
+                ? () => openBuild(
+                    context,
+                    () => BuildSession.readXml(session!.recoveryFile),
+                  )
                 : null,
           ),
           body: LayoutBuilder(
@@ -599,17 +703,18 @@ class _WorkshopState extends State<WorkshopApp> {
                             ),
                             SizedBox(height: 12),
                             Text(tr(context, status)),
+                            if (session?.hasUnsavedChanges == true || hasDraft)
+                              Text(tr(context, 'Есть несохранённые изменения')),
                             if (busy) const LinearProgressIndicator(),
                             SizedBox(height: 20),
                             FilledButton.tonal(
                               onPressed: ready && !busy
-                                  ? () => perform(() async {
-                                      await load(
-                                        await File(
-                                          '$root/app/docs/flutter/fixtures/fireball-basic/build.xml',
-                                        ).readAsString(),
-                                      );
-                                    })
+                                  ? () => openBuild(
+                                      context,
+                                      File(
+                                        '$root/app/docs/flutter/fixtures/fireball-basic/build.xml',
+                                      ).readAsString,
+                                    )
                                   : null,
                               child: Text(
                                 tr(context, 'Открыть эталон Fireball'),
@@ -632,7 +737,13 @@ class _WorkshopState extends State<WorkshopApp> {
                 section: section,
                 onSection: (value) => setState(() => section = value),
                 output: output,
-                buildInfo: buildInfo,
+                buildInfo: {
+                  ...buildInfo,
+                  if (output.isNotEmpty &&
+                      (session?.hasUnsavedChanges == true || hasDraft))
+                    'name':
+                        '${buildInfo['name']} · ${tr(context, 'Не сохранено')}',
+                },
                 initialShowPulse: showPulse,
                 initialNavigationWidth: navigationWidth,
                 initialPulseWidth: pulseWidth,

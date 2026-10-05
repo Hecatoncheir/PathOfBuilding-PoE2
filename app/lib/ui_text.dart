@@ -152,6 +152,17 @@ const englishUi = <String, String>{
   'Поиск сборок': 'Search builds',
   'Библиотека пока пуста': 'The library is empty',
   'Обновить': 'Refresh',
+  'Новая сборка': 'New build',
+  'Не сохранено': 'Unsaved',
+  'Создать': 'Create',
+  'От 1 до 100, ручной режим': 'From 1 to 100, manual mode',
+  'Недавние сборки': 'Recent builds',
+  'Есть несохранённые изменения': 'Unsaved changes',
+  'Продолжить без сохранения': 'Continue without saving',
+  'В полях есть неприменённый текст. Сохранение XML его не включает.':
+      'Some fields contain unapplied text. Saving XML does not include it.',
+  'Сохранить текущую сборку перед открытием другой?':
+      'Save the current build before opening another?',
   'Мои сборки': 'My builds',
   'Поиск раздела': 'Find a section',
   'Поиск раздела · Ctrl+K': 'Find a section · Ctrl+K',

@@ -14,18 +14,21 @@ class BuildLibraryView extends StatefulWidget {
     required this.enabled,
     required this.canSave,
     required this.onRename,
+    required this.onNew,
   });
   final BuildLibrary library;
   final Future<void> Function(File) onOpen;
   final Future<void> Function(String, String) onSave;
   final bool enabled, canSave;
   final void Function(File, File) onRename;
+  final Future<void> Function() onNew;
   @override
   State<BuildLibraryView> createState() => _BuildLibraryViewState();
 }
 
 class _BuildLibraryViewState extends State<BuildLibraryView> {
   List<File> files = [];
+  List<File> recent = [];
   String query = '', error = '';
   bool loading = true;
   @override
@@ -37,9 +40,12 @@ class _BuildLibraryViewState extends State<BuildLibraryView> {
   Future<void> refresh() async {
     try {
       final result = await widget.library.list();
+      if (mounted) setState(() => files = result);
+      final history = await widget.library.recent();
       if (mounted) {
         setState(() {
           files = result;
+          recent = history;
           error = '';
         });
       }
@@ -116,6 +122,7 @@ class _BuildLibraryViewState extends State<BuildLibraryView> {
           result.$2,
         );
         widget.onRename(source, target);
+        await widget.library.remember(target, previous: source);
       }
       await refresh();
     } catch (e) {
@@ -131,6 +138,11 @@ class _BuildLibraryViewState extends State<BuildLibraryView> {
         spacing: 12,
         runSpacing: 12,
         children: [
+          FilledButton.icon(
+            onPressed: widget.enabled ? widget.onNew : null,
+            icon: const Icon(Icons.add),
+            label: Text(tr(context, 'Новая сборка')),
+          ),
           FilledButton.icon(
             onPressed: widget.canSave ? () => edit() : null,
             icon: const Icon(Icons.save_outlined),
@@ -154,6 +166,23 @@ class _BuildLibraryViewState extends State<BuildLibraryView> {
       const SizedBox(height: 12),
       if (loading) const LinearProgressIndicator(),
       if (error.isNotEmpty) SelectableText(error),
+      if (recent.isNotEmpty) ...[
+        Text(
+          tr(context, 'Недавние сборки'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        for (final file in recent.where(
+          (file) => file.path.toLowerCase().contains(query),
+        ))
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.history),
+              title: Text(file.path),
+              onTap: widget.enabled ? () => widget.onOpen(file) : null,
+            ),
+          ),
+        const SizedBox(height: 16),
+      ],
       if (!loading && files.isEmpty) Text(tr(context, 'Библиотека пока пуста')),
       for (final file in files.where(
         (file) => widget.library.relative(file).toLowerCase().contains(query),

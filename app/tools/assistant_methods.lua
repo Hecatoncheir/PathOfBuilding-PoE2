@@ -16,6 +16,14 @@ return function(methods, fail, snapshot, finish)
 		end
 		return result
 	end
+	local function attributeOptions(node)
+		if not node.isAttribute then return nil end
+		local result = {}
+		for index, option in ipairs(node.options or {}) do
+			result[index] = { id = option.id, name = clean(option.dn or option.name), stats = option.sd or option.stats }
+		end
+		return result
+	end
 	function methods.createBuild(params)
 		if not integer(params.level or 1, 1, 100) then fail("INVALID_REQUEST", "Уровень должен быть целым от 1 до 100") end
 		if params.classId ~= nil and not build.spec.tree.classes[params.classId] then fail("INVALID_REQUEST", "Класс не найден") end
@@ -33,7 +41,10 @@ return function(methods, fail, snapshot, finish)
 		if not integer(limit, 1, 200) or not integer(offset, 0, 100000) then fail("INVALID_REQUEST", "Некорректная страница") end
 		local entries = {}
 		local function add(entry)
-			if (tostring(entry.id) .. " " .. (entry.name or "")):lower():find(query, 1, true) then entries[#entries + 1] = entry end
+			local search = tostring(entry.id) .. " " .. (entry.name or "")
+			for _, stat in ipairs(entry.stats or {}) do search = search .. " " .. stat end
+			for _, option in ipairs(entry.attributeOptions or {}) do search = search .. " " .. option.name end
+			if search:lower():find(query, 1, true) then entries[#entries + 1] = entry end
 		end
 		if kind == "gems" then
 			for id, gem in pairs(build.data.gems) do add({ id = id, name = gem.name, skillId = gem.grantedEffectId, support = gem.support == true, naturalMaxLevel = gem.naturalMaxLevel }) end
@@ -44,7 +55,7 @@ return function(methods, fail, snapshot, finish)
 				add({ id = id, name = class.name, ascendancies = asc })
 			end
 		elseif kind == "nodes" then
-			for id, node in pairs(build.spec.nodes) do add({ id = id, name = node.dn, type = node.type, stats = node.sd, attributeOptions = node.options, masteryEffects = node.masteryEffects, allocated = node.alloc == true, points = node.pathDist, path = (function() local out = {}; for _, n in ipairs(node.path or {}) do out[#out + 1] = n.id end; return out end)() }) end
+			for id, node in pairs(build.spec.nodes) do add({ id = id, name = node.dn, type = node.type, stats = node.sd, attributeOptions = attributeOptions(node), masteryEffects = node.masteryEffects, allocated = node.alloc == true, points = node.pathDist, path = (function() local out = {}; for _, n in ipairs(node.path or {}) do out[#out + 1] = n.id end; return out end)() }) end
 		elseif kind == "config" then
 			for _, value in ipairs(require("Modules.ConfigOptions")) do
 				if value.var then
