@@ -363,8 +363,9 @@ function methods.toggleNode(params)
 	runCallback("OnFrame")
 	return snapshot()
 end
+dofile("../app/tools/assistant_methods.lua")(methods, fail, snapshot, finishTreeChange)
 function methods.initialize()
-	return { methods = { "initialize", "loadBuild", "getSnapshot", "getWorkbench", "setCustomMods", "exportBuild", "selectMainSkill", "getTree", "getNodeTooltip", "getJewels", "treeOptions", "treeAction", "toggleNode", "shutdown" }, platform = "windows-experimental" }
+	return { methods = { "initialize", "createBuild", "getCatalog", "getBuildReport", "addSkillGroup", "addItem", "setConfig", "loadBuild", "getSnapshot", "getWorkbench", "setCustomMods", "exportBuild", "selectMainSkill", "getTree", "getNodeTooltip", "getJewels", "treeOptions", "treeAction", "toggleNode", "shutdown" }, platform = "windows-experimental" }
 end
 function methods.loadBuild(params)
 	validateXML(params.xml)
@@ -416,7 +417,7 @@ function methods.shutdown()
 	running = false
 	return { stopped = true }
 end
-local mutations = { selectMainSkill = true, loadBuild = true, setCustomMods = true, toggleNode = true, treeAction = true, treeOptions = true }
+local mutations = { createBuild = true, addSkillGroup = true, addItem = true, setConfig = true, selectMainSkill = true, loadBuild = true, setCustomMods = true, toggleNode = true, treeAction = true, treeOptions = true }
 local function dispatch(request)
 	if type(request) ~= "table" or type(request.id) ~= "string" or type(request.method) ~= "string" then
 		fail("INVALID_REQUEST", "Неверная структура запроса")
@@ -426,7 +427,7 @@ local function dispatch(request)
 	if not method then fail("UNKNOWN_METHOD", "Неизвестная команда") end
 	local params = request.params or {}
 	if type(params) ~= "table" then fail("INVALID_REQUEST", "params должен быть объектом") end
-	local requiresBuild = request.method ~= "initialize" and request.method ~= "loadBuild" and request.method ~= "shutdown"
+	local requiresBuild = request.method ~= "initialize" and request.method ~= "createBuild" and request.method ~= "getCatalog" and request.method ~= "loadBuild" and request.method ~= "shutdown"
 	if requiresBuild and not loaded then fail("INVALID_BUILD", "Сначала откройте сборку") end
 	if requiresBuild and params.revision ~= revision then fail("STALE_REVISION", "Ревизия сборки устарела") end
 	local previous = loaded and mutations[request.method] and build:SaveDB("rollback") or nil
@@ -447,6 +448,7 @@ local function dispatch(request)
 		if type(result) == "table" then error(result, 0) end
 		fail("CALCULATION_FAILED", tostring(result))
 	end
+	if request.method == "createBuild" then loaded = true end
 	if mutations[request.method] then revision = revision + 1 end
 	return result
 end
